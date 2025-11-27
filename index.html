@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi SPP Ma'had</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <style>
+        /* CSS DARI FILE ASLI (DIPERSINGKAT UNTUK EFISIENSI) */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary-color: #0d6efd; --primary-dark: #0b5ed7;
+            --sidebar-bg: #212529; --sidebar-text: rgba(255, 255, 255, 0.7);
+            --sidebar-text-active: #FFFFFF; --sidebar-hover-bg: #343a40;
+            --sidebar-active-bg: #0d6efd; --background-color: #f8f9fa;
+            --card-bg: #FFFFFF; --text-color: #212529; --text-light: #FFFFFF;
+            --border-color: #dee2e6; --success-color: #198754; --danger-color: #dc3545;
+            --warning-color: #ffc107; --info-color: #0dcaf0;
+            --stat-blue-bg: #3B82F6; --stat-green-bg: #10B981;
+            --stat-orange-bg: #F59E0B; --stat-red-bg: #EF4444;
+            --shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            --shadow-lg: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        html, body { height: 100%; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--background-color); color: var(--text-color); line-height: 1.6; overflow-x: hidden; }
+        .app-container { display: flex; min-height: 100vh; }
+        .sidebar { width: 280px; background-color: var(--sidebar-bg); padding: 0; display: flex; flex-direction: column; transition: transform 0.3s ease; position: fixed; top: 0; left: 0; height: 100%; z-index: 1000; }
+        .sidebar-brand { display: flex; align-items: center; gap: 12px; padding: 20px 24px; height: 70px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); flex-shrink: 0; }
+        .sidebar-logo { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; background-color: var(--primary-color); }
+        .sidebar-title { font-size: 1.1rem; font-weight: 600; color: var(--text-light); }
+        .sidebar nav { flex-grow: 1; overflow-y: hidden; }
+        .sidebar-nav { list-style: none; height: 100%; overflow-y: auto; padding: 16px; scrollbar-width: thin; scrollbar-color: var(--sidebar-hover-bg) transparent; }
+        .sidebar-nav::-webkit-scrollbar { width: 6px; }
+        .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background-color: var(--sidebar-hover-bg); border-radius: 3px; }
+        .sidebar-nav li a { display: flex; align-items: center; gap: 12px; padding: 14px 16px; text-decoration: none; color: var(--sidebar-text); font-weight: 500; border-radius: 8px; margin-bottom: 6px; transition: background-color 0.2s ease, color 0.2s ease; }
+        .sidebar-nav li a i { width: 20px; text-align: center; color: var(--sidebar-text); transition: color 0.2s ease; }
+        .sidebar-nav li a:hover { background-color: var(--sidebar-hover-bg); color: var(--text-light); }
+        .sidebar-nav li a:hover i { color: var(--text-light); }
+        .sidebar-nav li a.active { background-color: var(--sidebar-active-bg); color: var(--sidebar-text-active); font-weight: 600; }
+        .sidebar-nav li a.active i { color: var(--sidebar-text-active); }
+        /* Style untuk tombol Logout di sidebar */
+        .sidebar-footer { padding: 16px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+        .sidebar-footer .btn-logout { width: 100%; background-color: #dc3545; color: white; justify-content: center; }
+        .sidebar-footer .btn-logout:hover { background-color: #c82333; }
+
+        .top-header { display: flex; justify-content: space-between; align-items: center; background-color: var(--card-bg); border-bottom: 1px solid var(--border-color); padding: 0 24px; height: 70px; position: fixed; top: 0; left: 280px; right: 0; z-index: 900; transition: left 0.3s ease; }
+        .top-header-left { display: flex; align-items: center; gap: 16px; }
+        .sidebar-toggle { display: none; background: none; border: none; font-size: 1.25rem; color: var(--text-color); cursor: pointer; padding: 10px; border-radius: 8px; }
+        .sidebar-toggle:hover { background-color: var(--background-color); }
+        .breadcrumbs { font-size: 0.9rem; color: #6c757d; }
+        .breadcrumbs span { font-weight: 600; color: var(--text-color); }
+        .breadcrumbs a { color: var(--primary-color); text-decoration: none; }
+        .breadcrumbs a:hover { text-decoration: underline; }
+        .top-header-right { display: flex; align-items: center; gap: 16px; }
+        .header-icon { font-size: 1.2rem; color: #6c757d; cursor: pointer; }
+        .user-profile { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background-color: var(--border-color); }
+        .main-content { flex-grow: 1; margin-left: 280px; padding: 32px; padding-top: 102px; transition: margin-left 0.3s ease; }
+        .page { display: none; animation: fadeIn 0.5s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .page-header h1 { display: none; }
+        .btn { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.2s ease; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background-color: var(--primary-color); color: var(--text-light); }
+        .btn-primary:hover { background-color: var(--primary-dark); }
+        .btn-secondary { background-color: #6c757d; color: var(--text-light); }
+        .btn-secondary:hover { background-color: #5a6268; }
+        .btn-outline-primary { background-color: transparent; color: var(--primary-color); border: 1px solid var(--primary-color); }
+        .btn-outline-primary:hover { background-color: var(--primary-color); color: var(--text-light); }
+        .btn-success { background-color: var(--success-color); color: white; }
+        .btn-success:hover { background-color: #157347; }
+        .btn-danger { background-color: var(--danger-color); color: white; }
+        .btn-danger:hover { background-color: #bb2d3b; }
+        .btn-warning { background-color: var(--warning-color); color: #333; }
+        .btn-warning:hover { background-color: #ffca2c; }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+        .btn-group { display: flex; gap: 8px; }
+        .card { background-color: var(--card-bg); border-radius: 8px; border: 1px solid var(--border-color); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 24px; }
+        .card-header { padding: 20px 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .card-header h2 { font-size: 1.15rem; font-weight: 600; }
+        .card-body { padding: 24px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; }
+        .form-control { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.95rem; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+        .form-control:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.2); }
+        textarea.form-control { min-height: 120px; resize: vertical; }
+        .table-wrapper { overflow-x: auto; }
+        .table { width: 100%; border-collapse: collapse; text-align: left; }
+        .table th, .table td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        /* REVISI 2: Gaya untuk kolom yang bisa di-sort */
+        .table th.sortable { cursor: pointer; user-select: none; }
+        .table th.sortable i { margin-left: 8px; color: #6c757d; }
+        .table th.sortable.asc i.fa-sort-up { color: var(--primary-color); }
+        .table th.sortable.desc i.fa-sort-down { color: var(--primary-color); }
+        .table th.sortable:not(.asc):not(.desc) i.fa-sort { color: #aaa; }
+        /* END REVISI 2 */
+        .table th { font-weight: 600; font-size: 0.85rem; text-transform: uppercase; color: #6c757d; background-color: var(--background-color); }
+        .table tr:last-child td { border-bottom: none; }
+        .table tr:hover { background-color: #fdfdfd; }
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: inline-block; }
+        .status-badge.lunas { background-color: rgba(25, 135, 84, 0.1); color: var(--success-color); }
+        .status-badge.belum-lunas { background-color: rgba(220, 53, 69, 0.1); color: var(--danger-color); }
+        /* NEW: Gaya untuk progress bar status pembayaran */
+        .status-progress-container { width: 100%; max-width: 200px; background-color: #e9ecef; border-radius: 4px; overflow: hidden; height: 20px; margin-top: 5px; }
+        .status-progress-bar { height: 100%; color: white; text-align: center; line-height: 20px; font-size: 0.75rem; transition: width 0.3s ease-in-out; }
+        .status-progress-bar.success { background-color: var(--success-color); }
+        .status-progress-bar.danger { background-color: var(--danger-color); }
+        
+        dialog { border: none; border-radius: 8px; box-shadow: var(--shadow-lg); padding: 0; width: 90%; max-width: 600px; margin: auto; }
+        dialog::backdrop { background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(3px); }
+        .modal-header { padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
+        .modal-header h2 { font-size: 1.25rem; font-weight: 600; }
+        .modal-close-btn { background: none; border: none; font-size: 1.5rem; color: #888; cursor: pointer; transition: color 0.2s; }
+        .modal-close-btn:hover { color: #333; }
+        .modal-body { padding: 24px; max-height: 60vh; overflow-y: auto; }
+        .modal-footer { padding: 20px 24px; display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--border-color); background-color: #fdfdfd; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin-bottom: 24px; }
+        .stat-card { border: none; border-radius: 8px; padding: 24px; color: var(--text-light); display: flex; justify-content: space-between; align-items: flex-start; box-shadow: var(--shadow); transition: transform 0.2s ease; }
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-card.blue { background-color: var(--stat-blue-bg); }
+        .stat-card.green { background-color: var(--stat-green-bg); }
+        .stat-card.orange { background-color: var(--stat-orange-bg); }
+        .stat-card.red { background-color: var(--stat-red-bg); }
+        .stat-card-info h3 { font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); font-weight: 500; margin-bottom: 4px; text-transform: uppercase; }
+        .stat-card-info p { font-size: 1.75rem; font-weight: 700; color: var(--text-light); }
+        .stat-card-icon { font-size: 2.5rem; color: rgba(255, 255, 255, 0.7); }
+        .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; }
+        .filter-bar { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+        .card .filter-bar { margin-bottom: 0; }
+        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+        .checkbox-item { display: flex; align-items: center; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; background-color: #fdfdfd; cursor: pointer; }
+        .checkbox-item input[type="checkbox"] { margin-right: 10px; width: 18px; height: 18px; accent-color: var(--primary-color); flex-shrink: 0;}
+        #logoPreviewContainer { margin-top: 16px; }
+        #logoPreview { max-width: 150px; max-height: 150px; border-radius: 8px; border: 1px solid var(--border-color); object-fit: cover; }
+        .hidden { display: none; }
+        .text-small { font-size: 0.8rem; color: #6c757d; }
+        .tag { display: inline-block; padding: 4px 8px; background-color: #e9ecef; border-radius: 4px; font-size: 0.75rem; margin-right: 5px; margin-bottom: 5px; }
+        
+        /* New Style for Payment List */
+        .payment-list-item { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            padding: 8px 0; 
+            border-bottom: 1px dashed #eee; 
+        }
+        .payment-list-item:last-child {
+             border-bottom: none; 
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { transform: translateX(-100%); box-shadow: var(--shadow-lg); }
+            .sidebar.active { transform: translateX(0); }
+            .top-header { left: 0; }
+            .main-content { margin-left: 0; padding: 24px; padding-top: 94px; }
+            .sidebar-toggle { display: block; }
+            .page-header { flex-direction: column; align-items: flex-start; gap: 16px; }
+            .btn-group { flex-wrap: wrap; }
+        }
+        @media (max-width: 768px) {
+            .main-content { padding: 16px; padding-top: 86px; }
+            .top-header { padding: 0 16px; }
+            .breadcrumbs { display: none; }
+        }
+    </style>
+</head>
+<body>
+    
+    <div id="unauthorizedOverlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; color: white; display: flex; justify-content: center; align-items: center; flex-direction: column; text-align: center;">
+        <i class="fa-solid fa-triangle-exclamation" style="font-size: 3rem; color: var(--danger-color); margin-bottom: 20px;"></i>
+        <h2 style="margin-bottom: 10px;">Akses Dibatasi</h2>
+        <p>Anda harus login untuk mengakses halaman ini.</p>
+        <button class="btn btn-primary" id="redirectToLogin" style="margin-top: 20px; max-width: 200px;">
+            <i class="fa-solid fa-sign-in-alt"></i> Menuju Halaman Login
+        </button>
+    </div>
+
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+
+            <div class="sidebar-brand">
+                <img src="https://placehold.co/100x100/0d6efd/FFFFFF?text=M" alt="Logo Ma'had" class="sidebar-logo" id="sidebarLogo">
+                <span class="sidebar-title" id="sidebarTitle">Aplikasi SPP</span>
+            </div>
+
+            <nav>
+                <ul class="sidebar-nav" id="sidebarNav">
+                    <li><a href="#dashboard" class="nav-link active"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+                    <li><a href="#siswa" class="nav-link"><i class="fa-solid fa-users"></i> Pengaturan Siswa</a></li>
+                    <li><a href="#spp" class="nav-link"><i class="fa-solid fa-money-bill-wave"></i> Pengaturan SPP</a></li>
+                    <li><a href="#kelas" class="nav-link"><i class="fa-solid fa-school"></i> Pengaturan Kelas</a></li>
+                    <li><a href="#jurusan" class="nav-link"><i class="fa-solid fa-book-open"></i> Pengaturan Jurusan</a></li>
+                    <li><a href="#pemasukan-lain" class="nav-link"><i class="fa-solid fa-hand-holding-dollar"></i> Pemasukan Lain</a></li>
+                    <li><a href="#pengeluaran" class="nav-link"><i class="fa-solid fa-receipt"></i> Pengeluaran</a></li>
+                    <li><a href="#broadcast" class="nav-link"><i class="fa-brands fa-whatsapp"></i> Broadcast WA</a></li>
+                    <li><a href="#impor-ekspor" class="nav-link"><i class="fa-solid fa-file-import"></i> Import / Export</a></li>
+                    <li><a href="#identitas" class="nav-link"><i class="fa-solid fa-id-card"></i> Identitas Ma'had</a></li>
+                </ul>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="btn btn-logout" id="sidebarLogoutBtn"><i class="fa-solid fa-sign-out-alt"></i> Logout</button>
+            </div>
+
+        </aside>
+
+        <main class="main-content" id="mainContent">
+
+            <header class="top-header">
+                <div class="top-header-left">
+                    <button class="sidebar-toggle" id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
+                    <div class="breadcrumbs" id="breadcrumbs">
+                        <a href="#dashboard">Home</a> / <span>Dashboard</span>
+                    </div>
+                </div>
+
+                <div class="top-header-right">
+                    <i class="fa-regular fa-sun header-icon"></i>
+                    <i class="fa-regular fa-bell header-icon"></i>
+                    <button class="btn btn-sm btn-danger" id="headerLogoutBtn" style="padding: 6px 12px;"><i class="fa-solid fa-sign-out-alt"></i> Logout</button>
+                    <img src="https://placehold.co/40x40/adb5bd/FFFFFF?text=U" alt="User" class="user-profile">
+                </div>
+            </header>
+
+
+            <section id="page-dashboard" class="page active">
+                <div class="page-header"><h1>Dashboard</h1></div>
+                <div class="card"><div class="card-body filter-bar">
+                    <select id="dashFilterJurusan" class="form-control" style="width: auto; flex-grow: 1;"><option value="">Semua Jurusan</option></select>
+                    <select id="dashFilterKelas" class="form-control" style="width: auto; flex-grow: 1;"><option value="">Semua Kelas</option></select>
+                    <select id="dashFilterStatus" class="form-control" style="width: auto; flex-grow: 1;"><option value="">Semua Status</option><option value="lunas">Lunas</option><option value="belum-lunas">Belum Lunas</option></select>
+                    <button class="btn btn-primary" id="applyDashFilter"><i class="fa-solid fa-filter"></i> Terapkan</button>
+                </div></div>
+                <div class="dashboard-grid">
+                    <div class="stat-card blue"> <div class="stat-card-info"><h3>Total Siswa</h3><p id="statTotalSiswa">0</p></div><div class="stat-card-icon"><i class="fa-solid fa-users"></i></div></div>
+                    <div class="stat-card green"> <div class="stat-card-info"><h3>SPP Masuk (Bulan Ini)</h3><p id="statSppMasuk">Rp 0</p></div><div class="stat-card-icon"><i class="fa-solid fa-money-bill-transfer"></i></div></div>
+                    <div class="stat-card orange"> <div class="stat-card-info"><h3>Total SPP Masuk</h3><p id="statTotalSppMasuk">Rp 0</p></div> <div class="stat-card-icon"><i class="fa-solid fa-sack-dollar"></i></div></div>
+                    <div class="stat-card red"> <div class="stat-card-info"><h3>Potensi Pemasukan (Total Kewajiban SPP)</h3><p id="statPotensiPemasukan">Rp 0</p></div><div class="stat-card-icon"><i class="fa-solid fa-chart-line"></i></div></div>
+                    <div class="stat-card blue"> <div class="stat-card-info"><h3>Pemasukan Lain (Total)</h3><p id="statPemasukanLain">Rp 0</p></div><div class="stat-card-icon"><i class="fa-solid fa-wallet"></i></div></div>
+                     <div class="stat-card red"> <div class="stat-card-info"><h3>Pengeluaran (Bulan Ini)</h3><p id="statPengeluaranBulanIni">Rp 0</p></div><div class="stat-card-icon"><i class="fa-solid fa-money-bill-trend-up"></i></div></div>
+                     <div class="stat-card red"> <div class="stat-card-info"><h3>Total Pengeluaran</h3><p id="statTotalPengeluaran">Rp 0</p></div><div class="stat-card-icon"><i class="fa-solid fa-arrow-up-from-bracket" style="transform: rotate(180deg);"></i></div></div>
+                     <div class="stat-card green"> <div class="stat-card-info"><h3>Total Saldo</h3><p id="statTotalSaldo">Rp 0</p></div><div class="stat-card-icon"><i class="fa-solid fa-scale-balanced"></i></div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="card"><div class="card-header"><h2>Status Pembayaran SPP</h2></div><div class="card-body" style="height: 400px; position: relative;"><canvas id="chartStatusPembayaran"></canvas></div></div>
+                    <div class="card"><div class="card-header"><h2>Siswa Berdasarkan Gender</h2></div><div class="card-body" style="height: 400px; position: relative;"><canvas id="chartGender"></canvas></div></div>
+                </div>
+            </section>
+            <section id="page-identitas" class="page">
+                <div class="page-header"><h1>Identitas Ma'had</h1></div>
+                <div class="card"><div class="card-header"><h2>Pengaturan Informasi Ma'had</h2></div><div class="card-body"><form id="formIdentitas">
+                    <div class="form-group"><label for="identitasNama">Nama Ma'had</label><input type="text" id="identitasNama" class="form-control" required></div>
+                    <div class="form-group"><label for="identitasAlamat">Alamat</label><textarea id="identitasAlamat" class="form-control" required></textarea></div>
+                    <div class="form-group"><label for="identitasKepala">Kepala Ma'had</label><input type="text" id="identitasKepala" class="form-control" required></div>
+                    <div class="form-group"><label for="identitasBendahara">Bendahara</label><input type="text" id="identitasBendahara" class="form-control" required></div>
+                    <div class="form-group"><label for="identitasLogo">Logo Ma'had</label><input type="file" id="identitasLogo" class="form-control" accept="image/*">
+                        <div id="logoPreviewContainer" class="hidden"><p style="margin-top:10px; font-weight: 500;">Preview:</p><img id="logoPreview" src="#" alt="Logo Preview"></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Simpan Perubahan</button>
+                </form></div></div>
+            </section>
+            <section id="page-jurusan" class="page">
+                <div class="page-header"><h1>Pengaturan Jurusan</h1><button class="btn btn-primary" id="btnTambahJurusan"><i class="fa-solid fa-plus"></i> Tambah Jurusan</button></div>
+                <div class="card"><div class="card-body"><div class="table-wrapper"><table class="table"><thead><tr><th>Nama Jurusan</th><th>Biaya Pendaftaran</th><th>Aksi</th></tr></thead><tbody id="tabelJurusan"></tbody></table></div></div></div>
+            </section>
+            <section id="page-kelas" class="page">
+                <div class="page-header"><h1>Pengaturan Kelas</h1><button class="btn btn-primary" id="btnTambahKelas"><i class="fa-solid fa-plus"></i> Tambah Kelas</button></div>
+                <div class="card"><div class="card-body"><div class="table-wrapper"><table class="table"><thead><tr><th>Nama Kelas</th><th>Jurusan</th><th>Wali Kelas</th><th>Aksi</th></tr></thead><tbody id="tabelKelas"></tbody></table></div></div></div>
+            </section>
+            <section id="page-spp" class="page">
+                <div class="page-header"><h1>Pengaturan SPP</h1></div>
+                <div class="card"><div class="card-header"><h2>Biaya & Durasi SPP per Kelas</h2></div><div class="card-body"><div class="table-wrapper"><table class="table"><thead><tr><th>Nama Kelas</th><th>Jurusan</th><th>Biaya SPP (per Bulan)</th><th>Bulan Mulai</th><th>Bulan Selesai</th><th>Aksi</th></tr></thead><tbody id="tabelBiayaSPP"></tbody></table></div></div></div>
+            </section>
+
+            <section id="page-siswa" class="page">
+                <div class="page-header">
+                    <h1>Pengaturan Siswa</h1>
+                    <div class="btn-group">
+                        <button class="btn btn-danger" id="btnDeleteSelectedSiswa" style="display: none;"><i class="fa-solid fa-trash-alt"></i> Hapus yang Dipilih</button>
+                        <button class="btn btn-danger" id="btnDeleteAllSiswa"><i class="fa-solid fa-user-slash"></i> Hapus Semua Siswa</button>
+                        <button class="btn btn-secondary" id="btnImportSiswa"><i class="fa-solid fa-file-csv"></i> Import CSV</button>
+                        <button class="btn btn-primary" id="btnTambahSiswa"><i class="fa-solid fa-plus"></i> Tambah Siswa</button>
+                    </div>
+                </div>
+                <div class="card"><div class="card-body"><div class="filter-bar"><input type="text" id="filterSiswaNama" class="form-control" placeholder="Cari Nama/NIS..." style="width: auto; flex-grow: 1;"><select id="filterSiswaKelas" class="form-control" style="width: auto; flex-grow: 1;"><option value="">Semua Kelas</option></select><select id="filterSiswaStatus" class="form-control" style="width: auto; flex-grow: 1;"><option value="">Semua Status</option><option value="lunas">Lunas</option><option value="belum-lunas">Belum Lunas</option></select></div></div></div>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-wrapper">
+                            <table class="table" id="tabelSiswaUtama">
+                                <thead>
+                                    <tr>
+                                        <th><input type="checkbox" id="checkAllSiswa"></th>
+                                        <th class="sortable" data-sort-key="nama">Nama Siswa <i class="fa-solid fa-sort"></i></th>
+                                        <th class="sortable" data-sort-key="nis">NIS <i class="fa-solid fa-sort"></i></th>
+                                        <th class="sortable" data-sort-key="kelas">Kelas Aktif <i class="fa-solid fa-sort"></i></th>
+                                        <th class="sortable" data-sort-key="persentase">Status Pembayaran <i class="fa-solid fa-sort"></i></th>
+                                        <th class="sortable" data-sort-key="kesanggupan">Kesanggupan Bayar <i class="fa-solid fa-sort"></i></th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabelSiswa"></tbody>
+                            </table>
+                        </div>
+                        <div id="paginationSiswa" class="pagination" style="margin-top: 20px; display: flex; justify-content: center; gap: 8px;"></div>
+                    </div>
+                </div>
+            </section>
+            <section id="page-pemasukan-lain" class="page">
+                <div class="page-header"><h1>Pemasukan Keuangan Lain</h1><button class="btn btn-primary" id="btnTambahPemasukanLain"><i class="fa-solid fa-plus"></i> Tambah Pemasukan</button></div>
+                <div class="card"><div class="card-body"><div class="table-wrapper"><table class="table"><thead><tr><th>Tanggal</th><th>Keterangan</th><th>Jumlah</th><th>Aksi</th></tr></thead><tbody id="tabelPemasukanLain"></tbody></table></div></div></div>
+            </section>
+            <section id="page-pengeluaran" class="page">
+                <div class="page-header"><h1>Pengeluaran Keuangan</h1><button class="btn btn-primary" id="btnTambahPengeluaran"><i class="fa-solid fa-plus"></i> Tambah Pengeluaran</button></div>
+                <div class="card"><div class="card-body"><div class="table-wrapper"><table class="table"><thead><tr><th>Tanggal</th><th>Keterangan</th><th>Jumlah</th><th>Aksi</th></tr></thead><tbody id="tabelPengeluaran"></tbody></table></div></div></div>
+            </section>
+            <section id="page-broadcast" class="page">
+                <div class="page-header"><h1>Broadcast WhatsApp</h1></div>
+                <div class="card"><div class="card-header"><h2>Filter Penerima</h2></div><div class="card-body">
+                    <div class="filter-bar">
+                        <select id="broadcastFilterKategori" class="form-control" style="flex: 1;"><option value="semua">Semua Siswa</option><option value="per-kelas">Per Kelas</option><option value="belum-bayar">Siswa Belum Bayar (Tunggakan)</option><option value="sudah-bayar">Siswa Sudah Bayar (Lunas)</option><option value="penagihan-aktif">Penagihan Bulan Aktif</option></select>
+                        <select id="broadcastFilterKelas" class="form-control hidden" style="flex: 1;"><option value="">Pilih Kelas</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="broadcastMessage">Template Pesan</label>
+                        <textarea id="broadcastMessage" class="form-control" rows="8"></textarea>
+                        <small>Gunakan variabel: <code>{nama}</code>, <code>{nis}</code>, <code>{kelas}</code>, <code>{wali_kelas}</code>, <code>{kesanggupan_bayar}</code>, <code>{total_tunggakan_rupiah}</code>, <code>{rincian_spp_kelas}</code> (Rincian per kelas), <code>{mahad_nama}</code>, <code>{bendahara}</code>.</small>
+                    </div>
+                    <button class="btn btn-primary" id="btnGenerateBroadcastList"><i class="fa-solid fa-list-check"></i> Generate Daftar Penerima</button>
+                </div></div>
+                <div class="card hidden" id="broadcastListContainer"><div class="card-header"><h2>Daftar Penerima</h2></div><div class="card-body"><div class="table-wrapper"><table class="table"><thead><tr><th>Nama Siswa</th><th>No. WhatsApp</th><th>Pesan Terkirim</th><th>Aksi</th></tr></thead><tbody id="tabelBroadcast"></tbody></table></div></div></div>
+            </section>
+            <section id="page-impor-ekspor" class="page">
+                <div class="page-header"><h1>Import / Export Data</h1></div>
+                <div class="card"><div class="card-header"><h2>Export Data</h2></div><div class="card-body btn-group">
+                    <button class="btn btn-success" id="btnExportSiswaCsv"><i class="fa-solid fa-file-csv"></i> Export Data Siswa (CSV)</button>
+                    <button class="btn btn-success" id="btnExportPembayaranCsv"><i class="fa-solid fa-file-csv"></i> Export Data Pembayaran (CSV)</button>
+                    <button class="btn btn-primary" id="btnExportAllJson"><i class="fa-solid fa-file-code"></i> Export Seluruh Data (JSON)</button>
+                </div></div>
+                <div class="card"><div class="card-header"><h2>Import Data</h2></div><div class="card-body">
+                    <form id="formImportSiswa"><div class="form-group"><label for="importSiswaFile">Import Data Siswa (CSV)</label><input type="file" id="importSiswaFile" class="form-control" accept=".csv" required>
+                        <small>Format CSV: <code>NIS,Nama,Nama_Kelas,Nama_Jurusan,Jenis_Kelamin,No_WhatsApp,Email,Kesanggupan_Bayar</code> ('cicil'/'sekaligus')</small><br>
+                        <button type="button" id="btnUnduhContohCsv" class="btn btn-secondary btn-sm" style="margin-top: 10px;"><i class="fa-solid fa-download"></i> Unduh Contoh CSV</button>
+                    </div><button type="submit" class="btn btn-primary"><i class="fa-solid fa-file-import"></i> Import Siswa</button></form>
+                    <hr style="margin: 20px 0;">
+                    <form id="formImportJson"><div class="form-group"><label for="importJsonFile">Import Seluruh Data (JSON)</label><input type="file" id="importJsonFile" class="form-control" accept=".json" required>
+                        <small class="text-danger"><b>Peringatan:</b> Ini akan menimpa semua data yang ada saat ini.</small>
+                    </div><button type="submit" class="btn btn-danger"><i class="fa-solid fa-triangle-exclamation"></i> Import & Timpa Data</button></form>
+                </div></div>
+                <div class="card"><div class="card-header"><h2>Simpan Data</h2></div><div class="card-body">
+                    <p>Semua perubahan disimpan secara otomatis ke server melalui API.</p>
+                    <button class="btn btn-danger" id="btnResetData"><i class="fa-solid fa-trash-alt"></i> Reset Semua Data Aplikasi</button>
+                    <small style="display: block; margin-top: 10px; color: var(--danger-color);"><b>Peringatan:</b> Tindakan ini akan menghapus semua data (siswa, jurusan, kelas, pembayaran, dll) secara permanen dari server.</small>
+                </div></div>
+            </section>
+
+        </main>
+    </div>
+
+    <dialog id="modalJurusan">
+        <form id="formJurusan">
+            <div class="modal-header">
+                <h2 id="modalJurusanTitle">Tambah Jurusan Baru</h2>
+                <button type="button" class="modal-close-btn" data-close-modal="modalJurusan">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="jurusanId">
+                <div class="form-group"><label for="jurusanNama">Nama Jurusan</label><input type="text" id="jurusanNama" class="form-control" required></div>
+                <div class="form-group"><label for="jurusanBiaya">Biaya Pendaftaran</label><input type="number" id="jurusanBiaya" class="form-control" required></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-close-modal="modalJurusan">Batal</button> <button type="submit" class="btn btn-primary">Simpan</button></div>
+        </form>
+    </dialog>
+    <dialog id="modalKelas">
+        <form id="formKelas">
+            <div class="modal-header">
+                <h2 id="modalKelasTitle">Tambah Kelas Baru</h2>
+                <button type="button" class="modal-close-btn" data-close-modal="modalKelas">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="kelasId">
+                <div class="form-group"><label for="kelasNama">Nama Kelas</label><input type="text" id="kelasNama" class="form-control" required></div>
+                <div class="form-group"><label for="kelasJurusan">Jurusan</label><select id="kelasJurusan" class="form-control" required><option value="">Pilih Jurusan</option></select></div>
+                <div class="form-group"><label for="kelasWali">Wali Kelas</label><input type="text" id="kelasWali" class="form-control" required></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-close-modal="modalKelas">Batal</button> <button type="submit" class="btn btn-primary">Simpan</button></div>
+        </form>
+    </dialog>
+    <dialog id="modalBiayaSPP">
+        <form id="formBiayaSPP">
+            <div class="modal-header">
+                <h2 id="modalBiayaSPPTitle">Atur Biaya & Durasi SPP</h2>
+                <button type="button" class="modal-close-btn" data-close-modal="modalBiayaSPP">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="sppKelasId">
+                <p>Kelas: <strong id="sppNamaKelas"></strong></p><p>Jurusan: <strong id="sppNamaJurusan"></strong></p><hr style="margin: 16px 0;">
+                <div class="form-group"><label for="sppBiaya">Biaya SPP per Bulan</label><input type="number" id="sppBiaya" class="form-control" placeholder="Contoh: 150000" required></div>
+                <div class="form-group"><label for="sppModalBulanMulai">Bulan Mulai Tagihan</label><input type="month" id="sppModalBulanMulai" class="form-control" required></div>
+                <div class="form-group"><label for="sppModalBulanSelesai">Bulan Selesai Tagihan</label><input type="month" id="sppModalBulanSelesai" class="form-control" required></div>
+                <p class="text-small" style="color: var(--danger-color);">CATATAN: Biaya SPP akan ditagihkan kepada semua siswa yang terdaftar di kelas ini.</p>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-close-modal="modalBiayaSPP">Batal</button> <button type="submit" class="btn btn-primary">Simpan</button></div>
+        </form>
+    </dialog>
+    <dialog id="modalSiswa">
+        <form id="formSiswa">
+            <div class="modal-header">
+                <h2 id="modalSiswaTitle">Tambah Siswa Baru</h2>
+                <button type="button" class="modal-close-btn" data-close-modal="modalSiswa">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="siswaId">
+                <div class="form-group"><label for="siswaNama">Nama Lengkap</label><input type="text" id="siswaNama" class="form-control" required></div>
+                <div class="form-group"><label for="siswaNis">Nomor Induk Santri (NIS)</label><input type="text" id="siswaNis" class="form-control" required></div>
+                
+                <div class="form-group">
+                    <label>Pilih Kelas <span style="font-weight: normal; font-size: 0.8em;">(Wajib pilih minimal satu, semua kelas yang dipilih akan dikenakan tagihan SPP sesuai pengaturan kelas)</span></label>
+                    <div id="siswaMultiKelasCheckboxes" class="checkbox-grid" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));">
+                        </div>
+                </div>
+
+                <div class="form-group"><label for="siswaGender">Jenis Kelamin</label><select id="siswaGender" class="form-control" required><option value="">Pilih Jenis Kelamin</option><option value="Laki-laki">Laki-laki</option><option value="Perempuan">Perempuan</option></select></div>
+                 <div class="form-group"><label for="siswaKesanggupanBayar">Kesanggupan Bayar SPP</label><select id="siswaKesanggupanBayar" class="form-control" required><option value="cicil">Cicil per Bulan</option><option value="sekaligus">Bayar Sekaligus</option></select></div>
+                <div class="form-group"><label for="siswaWa">Nomor WhatsApp</label><input type="tel" id="siswaWa" class="form-control" placeholder="Contoh: 6281234567890" required></div>
+                <div class="form-group"><label for="siswaEmail">Email</label><input type="email" id="siswaEmail" class="form-control"></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-close-modal="modalSiswa">Batal</button> <button type="submit" class="btn btn-primary">Simpan</button></div>
+        </form>
+    </dialog>
+    <dialog id="modalBayarSPP">
+        <form id="formBayarSPP">
+            <div class="modal-header">
+                <h2 id="modalBayarSPPTitle">Pembayaran SPP (Multi-Kelas)</h2>
+                <button type="button" class="modal-close-btn" data-close-modal="modalBayarSPP">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="bayarSiswaId">
+                <p>Nama: <strong id="bayarNamaSiswa"></strong></p>
+                <p>Kelas Aktif: <strong id="bayarKelasSiswa"></strong></p>
+                <p>Biaya SPP/Bulan (Aggregat): <strong id="bayarBiayaSpp">Rp 0</strong></p>
+                
+                <hr style="margin: 16px 0;">
+                
+                <div class="form-group">
+                    <label>Pilih Bulan dan Kelas yang Dibayar:</label>
+<div class="form-group" style="margin-top: 15px; background: #f8f9fa; padding: 10px; border-radius: 6px;">
+                    <label for="bayarBuktiFile" style="margin-bottom: 5px; display:block;">Upload Bukti Transfer (Opsional)</label>
+                    <input type="file" id="bayarBuktiFile" class="form-control" accept="image/*,application/pdf">
+                    <small style="color: #6c757d;">Format: JPG, PNG, PDF.</small>
+                </div>
+                <hr style="margin: 16px 0;">
+                    <button type="button" class="btn btn-danger btn-sm" id="btnHapusSemuaPembayaran" style="margin-bottom: 10px; display: none;"><i class="fa-solid fa-trash-alt"></i> Hapus Semua Pembayaran SPP Siswa</button>
+                    <div id="bayarDaftarBulanWajib" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; padding: 12px;">
+                        </div>
+                </div>
+                
+                <hr style="margin: 16px 0;">
+                
+                <h3 style="font-weight: 600;">Total Dibayar: <span id="bayarTotal" style="color: var(--primary-color);">Rp 0</span></h3>
+                <p class="text-small" style="color: var(--danger-color);">CATATAN: Centang setiap baris (Kelas/Bulan) yang akan dibayar. Pembayaran akan dicatat secara granular per kelas.</p>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-close-modal="modalBayarSPP">Batal</button> <button type="submit" class="btn btn-primary">Simpan Pembayaran</button></div>
+        </form>
+    </dialog>
+    <dialog id="modalPemasukanLain">
+        <form id="formPemasukanLain">
+            <div class="modal-header">
+                <h2 id="modalPemasukanLainTitle">Tambah Pemasukan Lain</h2>
+                <button type="button" class="modal-close-btn" data-close-modal="modalPemasukanLain">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="pemasukanLainId">
+                <div class="form-group"><label for="pemasukanLainTanggal">Tanggal</label><input type="date" id="pemasukanLainTanggal" class="form-control" required></div>
+                <div class="form-group"><label for="pemasukanLainKeterangan">Keterangan</label><input type="text" id="pemasukanLainKeterangan" class="form-control" placeholder="Contoh: Infaq, Donasi" required></div>
+                <div class="form-group"><label for="pemasukanLainJumlah">Jumlah</label><input type="number" id="pemasukanLainJumlah" class="form-control" placeholder="Contoh: 500000" required></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-close-modal="modalPemasukanLain">Batal</button> <button type="submit" class="btn btn-primary">Simpan</button></div>
+        </form>
+    </dialog>
+    <dialog id="modalPengeluaran">
+        <form id="formPengeluaran">
+            <div class="modal-header">
+                <h2 id="modalPengeluaranTitle">Tambah Pengeluaran Baru</h2>
+                <button type="button" class="modal-close-btn" data-close-modal="modalPengeluaran">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="pengeluaranId">
+                <div class="form-group"><label for="pengeluaranTanggal">Tanggal</label><input type="date" id="pengeluaranTanggal" class="form-control" required></div>
+                <div class="form-group"><label for="pengeluaranKeterangan">Keterangan</label><input type="text" id="pengeluaranKeterangan" class="form-control" placeholder="Contoh: Pembelian ATK, Gaji Ustadz" required></div>
+                <div class="form-group"><label for="pengeluaranJumlah">Jumlah</label><input type="number" id="pengeluaranJumlah" class="form-control" placeholder="Contoh: 100000" required></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-close-modal="modalPengeluaran">Batal</button> <button type="submit" class="btn btn-primary">Simpan</button></div>
+        </form>
+    </dialog>
+    <dialog id="modalImportSiswa">
+        <form id="formImportSiswaDialog">
+             <div class="modal-header">
+                <h2>Import Data Siswa (CSV)</h2>
+                <button type="button" class="modal-close-btn" data-close-modal="modalImportSiswa">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="importSiswaFileDialog">Pilih File CSV</label>
+                    <input type="file" id="importSiswaFileDialog" class="form-control" accept=".csv" required>
+                    <small>Format: <code>NIS,Nama,Nama_Kelas,Nama_Jurusan,Jenis_Kelamin,No_WhatsApp,Email,Kesanggupan_Bayar</code></small>
+                </div>
+                 <button type="button" id="btnUnduhContohCsvDialog" class="btn btn-secondary btn-sm" style="margin-top: 10px;"><i class="fa-solid fa-download"></i> Unduh Contoh CSV</button>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-close-modal="modalImportSiswa">Batal</button> <button type="submit" class="btn btn-primary">Import</button></div>
+        </form>
+    </dialog>
+
+    <div id="toastNotification" style="position: fixed; top: 20px; right: 20px; background-color: var(--primary-color); color: white; padding: 16px 24px; border-radius: 8px; box-shadow: var(--shadow-lg); z-index: 9999; display: none; transition: all 0.3s ease;">
+        <span id="toastMessage"></span>
+    </div>
+
+
+ 
+    <script src="app.min.js"></script>
+
+</body>
+</html>

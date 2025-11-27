@@ -1,0 +1,8 @@
+# Mencegah akses langsung ke file JSON
+<Files "data.json">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# Mencegah akses langsung ke folder uploads (opsional, untuk keamanan ekstra)
+Options -Indexes
